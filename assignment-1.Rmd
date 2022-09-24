@@ -1,6 +1,6 @@
 ---
 title: "Assignment 1 - The tidyverse"
-author: "FILL IN YOUR FULL NAME"
+author: "Adrian Werner"
 date: "`r format(Sys.time(), '%B %d, %Y | %H:%M:%S | %Z')`"
 output:
   html_document:
@@ -9,6 +9,8 @@ output:
     highlight: tango
     number_sections: no
     theme: cosmo
+    toc: no
+  pdf_document:
     toc: no
 ---
   
@@ -30,7 +32,9 @@ knitr::opts_chunk$set(echo = TRUE,
 ***
 
 ```{r, include = T}
-# LOAD THE PACKAGES YOU ARE USING IN THIS CODE CHUNK library(nameofpackage)
+library("tidyverse")
+library(legislatoR)
+library(lubridate)
 ```
 
 <br>
@@ -39,7 +43,7 @@ knitr::opts_chunk$set(echo = TRUE,
 
 The Comparative Legislators Database (CLD) includes political, sociodemographic, career, online presence, public attention, and visual information for over 45,000 contemporary and historical politicians from ten countries (see the [corresponding article](https://www.cambridge.org/core/journals/british-journal-of-political-science/article/comparative-legislators-database/D28BB58A8B2C08C8593DB741F42C18B2) for more information). It can be accessed via `legislatoR` - an R package that is available on both [CRAN](https://cran.r-project.org/web/packages/legislatoR/index.html) and [GitHub](https://github.com/saschagobel/legislatoR).
 
-Before you start with the following tasks, skim the tutorial to make yourself familiar with the database. You find it [here](https://cran.r-project.org/web/packages/legislatoR/vignettes/legislatoR.html).
+Before you start with the following tasks, skim the tutorial to make yourself familiar with the database. You find it [here](https://cran.r-project.org/web/packages/legislaaut_house_core4toR/vignettes/legislatoR.html).
 
 For the following tasks, you will work with ONE of the legislatures. The legislature you'll work with depends on your first name:
 
@@ -66,31 +70,58 @@ The following tasks will be based on data from the `core` and `political` tables
 a) What's the overall share of male legislators in the entire dataset? [1 point]
 
 ```{r}
-# YOUR CODE HERE
+aut_house_core <- get_core(legislature = "aut")
+
+table(aut_house_core$sex)/length(aut_house_core$sex)
 ```
 
 b) How many (both in absolute and relative terms) legislators died in the same place they were born in? [1 point]
 
 ```{r}
-# YOUR CODE HERE
+
+aut_house_core %>%
+  filter(aut_house_core$birthplace == aut_house_core$deathplace) %>%
+  nrow()
+ 
+aut_house_core %>%
+  filter(aut_house_core$birthplace == aut_house_core$deathplace) %>%
+  nrow()/nrow(aut_house_core)   
+
 ```
 
 c) Create a new variable `age_at_death` that reports the age at which legislators died. Then, plot the distribution of that variable for the entire dataset. [2 points]
 
 ```{r}
-# YOUR CODE HERE
+aut_house_core2 <- aut_house_core %>%
+  select(name, death, birth) %>%
+  mutate(
+    age_at_death = time_length(difftime(aut_house_core$death, aut_house_core$birth), "years")
+  )
+
+hist(aut_house_core2$age_at_death, main = "Distribution Age of Death", xlab = "Age")
+    
 ```
 
 d) What is the most frequent birthday in your sample (e.g., “January 15")? [2 points]
 
 ```{r}
-# YOUR CODE HERE
+birth_fac <- as.factor(aut_house_core$birth)
+names(which.max(table(birth_fac)))
 ```
 
 e) Generate a table that provides the 5 legislators with the longest names (in terms of number of characters, ignoring whitespace). [2 points]
 
 ```{r}
-# YOUR CODE HERE
+aut_house_core3 <- aut_house_core %>%
+  select(name) %>%
+  mutate(
+    character_length = nchar(name))  %>% 
+  arrange(desc(character_length)
+  )
+  
+ aut_house_core4 <- head(aut_house_core3, 5)
+ 
+ aut_house_core4
 ```
 
 <br>
@@ -102,17 +133,31 @@ e) Generate a table that provides the 5 legislators with the longest names (in t
 a) Using data from all sessions, provide a plot that shows the share of male legislators by session! [3 points]
 
 ```{r}
-# YOUR CODE HERE
+
+aut_house_pol <- get_political(legislature = "aut")
+
+merged_df <- merge.data.frame(aut_house_core, aut_house_pol)
+
+merged_df %>% 
+  mutate(gender = ifelse(merged_df$sex == "male", 1, 0)) %>%
+  group_by(session) %>%
+    summarise(perc_male = ((sum(gender)/length(gender))))
 ```
 
 b) Explore another relation of variables in the dataset. Your analysis should (i) use data from both the `core` and the `political` table and (ii) feature data from several sessions. Also, offer a brief description and interpretation of your findings! [5 points]
 
 ```{r}
-# YOUR CODE HERE
+
+merged_df %>%
+  mutate(death_no = ifelse(is.na(merged_df$death), 0, 1)) %>%
+  group_by(party) %>%
+    summarise(death_no = sum(death_no)/length(death_no)) %>%
+  arrange(desc(death_no))
+
 ```
 
 <div class = "answer">
-YOUR ANSWER SHOULD GO HERE
+The table shows, in absolute terms, the death rate among party members in a descending order. Interestingly, there are a number of parties with a death rate of 100%. This is because they are members of parties that do not exist any longer. These parties are therefore not only formally but also in terms of their representatives vanished from the political landscape. Interestingly, even the biggest parties SPÖ (founded 1889) and ÖVP (founded 1945) are >50% "dead", indicating that Austria is already a old democracy.    
 </div>
 
 <br>
